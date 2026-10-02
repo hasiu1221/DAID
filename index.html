@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI RPG: Infinite Realms</title>
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#1a1a1a">
+    <style>
+        body { font-family: sans-serif; background: #121212; color: white; margin: 0; padding: 0; height: 100vh; overflow: hidden; position: relative; display: flex; flex-direction: column; }
+
+        header { position: absolute; top: 0; left: 0; width: 100%; height: 50px; padding: 0 15px; text-align: center; border-bottom: 1px solid #222; background: #1a1a1a; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; z-index: 10; }
+        h2 { margin: 0; font-size: 16px; color: #fff; flex-grow: 1; text-align: center; }
+
+        #hub-screen { position: absolute; top: 50px; left: 0; width: 100%; bottom: 0; padding: 20px; overflow-y: auto; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; }
+        .hub-content { max-width: 800px; width: 100%; }
+        .hub-title { font-size: 22px; font-weight: bold; margin-bottom: 5px; color: #ccff00; text-align: center; }
+        .hub-subtitle { font-size: 13px; color: #888; text-align: center; margin-bottom: 20px; }
+
+        .top-menu-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; background: #181818; padding: 12px; border-radius: 10px; border: 1px solid #333; }
+        .save-controls { display: flex; gap: 8px; flex-wrap: wrap; }
+        
+        .btn { background: #2a2a2a; color: white; border: 1px solid #444; padding: 8px 14px; border-radius: 8px; font-size: 12px; cursor: pointer; transition: 0.2s; font-weight: bold; }
+        .btn:hover { background: #ccff00; color: black; border-color: #ccff00; }
+        .btn-creator { background: #ccff00; color: black; border-color: #ccff00; }
+
+        .category-section-title { font-size: 16px; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px; margin-top: 15px; color: #aaa; }
+        
+        .category-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 15px; padding-bottom: 20px; }
+        .category-card { background: #1a1a1a; border: 1px solid #333; border-radius: 12px; padding: 15px; cursor: pointer; transition: 0.2s; display: flex; flex-direction: column; gap: 8px; position: relative; }
+        .category-card:hover { border-color: #ccff00; background: #1f1f1f; }
+        .category-card h3 { margin: 0; font-size: 16px; color: white; }
+        .category-card p { margin: 0; font-size: 12px; color: #aaa; line-height: 1.4; }
+        .category-badge { background: #2a2a2a; color: #ccff00; padding: 3px 6px; border-radius: 4px; font-size: 10px; align-self: flex-start; }
+
+        #chat-screen { display: none; flex-direction: column; position: absolute; top: 50px; left: 0; width: 100%; bottom: 0; padding: 10px; box-sizing: border-box; background: #121212; }
+        #chat { flex-grow: 1; overflow-y: auto; margin-bottom: 10px; display: flex; flex-direction: column; padding-bottom: 10px; max-width: 800px; width: 100%; margin-left: auto; margin-right: auto; box-sizing: border-box; }
+        .msg { margin: 6px 0; padding: 12px 16px; border-radius: 12px; max-width: 85%; line-height: 1.4; font-size: 13px; }
+        .user { background: #ccff00; color: black; align-self: flex-end; border-bottom-right-radius: 2px; }
+        .ai { background: #2a2a2a; align-self: flex-start; border-bottom-left-radius: 2px; }
+        
+        /* Profesjonalny wygląd obrazków i ładowania */
+        .ai-image-container { position: relative; width: 100%; min-height: 200px; border-radius: 10px; margin-top: 10px; border: 1px solid #444; background: #1e1e1e; display: flex; align-items: center; justify-content: center; overflow: hidden; transition: 0.3s; }
+        .ai-image { max-width: 100%; border-radius: 10px; display: block; width: 100%; height: auto; }
+        .loader-spinner { border: 4px solid #333; border-top: 4px solid #ccff00; border-radius: 50%; width: 35px; height: 35px; animation: spin 1s linear infinite; position: absolute; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        #choices-area { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; max-width: 800px; width: 100%; margin-left: auto; margin-right: auto; box-sizing: border-box; }
+        .choice-btn { background: #1a1a1a; color: #ccff00; border: 1px solid #ccff00; padding: 10px 14px; border-radius: 8px; font-size: 13px; cursor: pointer; transition: 0.2s; flex: 1 1 auto; text-align: center; }
+        .choice-btn:hover { background: #ccff00; color: black; }
+
+        #input-area { display: flex; gap: 8px; padding-bottom: 5px; background: #121212; flex-shrink: 0; max-width: 800px; width: 100%; margin: 0 auto; box-sizing: border-box; align-items: center; }
+        input[type="text"], select { flex-grow: 1; padding: 12px; border-radius: 20px; border: none; background: #2a2a2a; color: white; outline: none; font-size: 13px;}
+        button.btn-wyslij { padding: 12px 18px; background: #ccff00; color: black; border: none; border-radius: 20px; font-weight: bold; font-size: 13px; cursor: pointer; }
+        .btn-header { background: #333; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11px; cursor: pointer; }
+        
+        .btn-mic { background: #2a2a2a; color: white; border: 1px solid #444; border-radius: 50%; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; transition: 0.2s; flex-shrink: 0; }
+        .btn-mic.listening { background: #ff3b30; animation: pulse 1.5s infinite; border-color: #ff3b30; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+
+        /* Niestandardowe Okna Dialogowe (Modale) */
+        .modal-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.85); z-index: 100; justify-content: center; align-items: center; padding: 15px; box-sizing: border-box; }
+        .modal-box { background: #1a1a1a; padding: 25px; border-radius: 12px; border: 1px solid #333; max-width: 500px; width: 100%; display: flex; flex-direction: column; gap: 15px; max-height: 90vh; overflow-y: auto; text-align: left; }
+        .modal-box h3 { margin: 0 0 5px 0; color: #ccff00; text-align: center; }
+        .modal-box p.modal-desc { font-size: 13px; color: #ccc; text-align: center; margin: 0 0 10px 0; }
+        .modal-box label { font-size: 12px; color: #aaa; margin-bottom: -5px; }
+        .modal-box input, .modal-box textarea, .modal-box select { width: 100%; padding: 12px; background: #121212; border: 1px solid #444; color: white; border-radius: 8px; box-sizing: border-box; font-family: sans-serif; font-size: 13px; }
+        .modal-box textarea { resize: vertical; min-height: 80px; }
+        .modal-actions { display: flex; gap: 10px; margin-top: 15px; justify-content: center; }
+        .modal-actions button { flex: 1; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px; }
+        
+        .btn-confirm { background: #ccff00; color: black; border: 1px solid #ccff00; }
+        .btn-cancel { background: #2a2a2a; color: white; border: 1px solid #444; }
+        .btn-cancel:hover { background: #444; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <button id="btn-back" class="btn-header" style="display:none;" onclick="pokazHub()">Wróć / Back</button>
+        <h2 id="app-title">Wybierz Świat</h2>
+        <button id="btn-reset" class="btn-header" style="display:none;" onclick="pytanieOReset()">Reset</button>
+    </header>
+
+    <div id="hub-screen">
+        <div class="hub-content">
+            <div class="hub-title" id="txt-main-title">Biblioteka Światów</div>
+            <div class="hub-subtitle" id="txt-main-sub">Skonfiguruj postać, wybierz jeden z 10 światów i rozpocznij przygodę.</div>
+
+            <div class="top-menu-bar">
+                <div class="save-controls">
+                    <button class="btn" onclick="eksportujPlik()" id="btn-exp">📤 Export Save File</button>
+                    <label class="btn" style="display:inline-block; margin:0; cursor:pointer;">
+                        📥 <span id="btn-imp">Import Save File</span>
+                        <input type="file" id="import-file" style="display:none" onchange="imortujPlik(event)">
+                    </label>
+                    <button class="btn btn-creator" onclick="otworzKreator()" id="btn-create">➕ Create World</button>
+                </div>
+                <div>
+                    <label id="lbl-lang" style="font-size:11px; color:#aaa; margin-right:5px;">Language:</label>
+                    <select id="lang-select" onchange="zmienJezyk(this.value)" style="padding:6px; border-radius:6px; width:auto;">
+                        <option value="pl">Polski</option>
+                        <option value="en">English</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="category-section-title" id="sec-char">Konfiguracja Twojej Postaci / Character Setup</div>
+            <div style="background: #181818; padding: 15px; border-radius: 12px; border: 1px solid #333; display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px;">
+                <div style="flex: 2; min-width: 150px;">
+                    <label style="font-size:11px; color:#aaa;" id="lbl-name">Imię / Name:</label>
+                    <input type="text" id="player-name" placeholder="np. Alex" value="Alex" onchange="zapiszPostac()">
+                </div>
+                <div style="flex: 1; min-width: 100px;">
+                    <label style="font-size:11px; color:#aaa;" id="lbl-gender">Płeć / Gender:</label>
+                    <select id="player-gender" onchange="zapiszPostac()" style="width:100%; padding:10px; margin-top:5px;">
+                        <option value="Mężczyzna / Male">Mężczyzna / Male</option>
+                        <option value="Kobieta / Female">Kobieta / Female</option>
+                        <option value="Inna / Other">Inna / Other</option>
+                    </select>
+                </div>
+                <div style="flex: 1; min-width: 80px;">
+                    <label style="font-size:11px; color:#aaa;" id="lbl-age">Wiek / Age:</label>
+                    <input type="number" id="player-age" value="18" onchange="zapiszPostac()" style="width:100%; padding:10px; margin-top:5px; background:#121212; border:1px solid #444; color:white; border-radius:6px; box-sizing:border-box;">
+                </div>
+            </div>
+
+            <div id="custom-categories-container" style="display: none;">
+                <div class="category-section-title" id="sec-custom">Twoje Własne Opowieści / Custom Stories</div>
+                <div class="category-grid" id="custom-categories-grid"></div>
+            </div>
+
+            <div class="category-section-title" id="sec-official">Oficjalne Scenariusze / Official Scenarios</div>
+            <div class="category-grid" id="official-categories-grid"></div>
+        </div>
+    </div>
+
+    <!-- EKRAN GRY -->
+    <div id="chat-screen">
+        <div id="chat"></div>
+        <div id="choices-area"></div>
+        <div id="input-area">
+            <button class="btn-mic" id="mic-btn" onclick="nasluchajGlos()" title="Mów do mikrofonu">🎤</button>
+            <input type="text" id="userInput" placeholder="Twoja akcja..." onkeypress="nasluchajEnter(event)">
+            <button class="btn-wyslij" onclick="wyslijWiadomosc()" id="btn-send">Wyślij</button>
+        </div>
+    </div>
+
+    <!-- MODAL: KREATOR ŚWIATÓW -->
+    <div id="creator-modal" class="modal-overlay">
+        <div class="modal-box">
+            <h3 id="c-mod-title">Kreator Nowego Świata</h3>
+            <label id="c-mod-l1">Tytuł Przygody:</label>
+            <input type="text" id="c-title" placeholder="np. Mój Mroczny Świat Fantasy">
+            <label id="c-mod-l2">Tagi i Gatunek:</label>
+            <input type="text" id="c-tags" placeholder="np. Fantasy / Magia / Mrok">
+            <label id="c-mod-l3">Opis i Streszczenie:</label>
+            <input type="text" id="c-desc" placeholder="np. Świat w którym królują smoki i starożytne zaklęcia...">
+            <label id="c-mod-l4">Prompt dla Mistrza Gry:</label>
+            <textarea id="c-prompt" placeholder="np. Jesteś Mistrzem Gry RPG. Ja jestem graczem. Pisz mrocznie i klimatycznie."></textarea>
+            <label id="c-mod-l5">Wiadomość Startowa (opcjonalnie - zostaw puste, a AI wygeneruje ją samo):</label>
+            <textarea id="c-start" placeholder="Zostaw puste, a AI samo wymyśli początek..."></textarea>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="zamknijModale()" id="c-mod-cancel">Anuluj</button>
+                <button class="btn-confirm" onclick="zapiszWlasnaGre()" id="c-mod-save">Zapisz i Dodaj</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: ALERT -->
+    <div id="alert-modal" class="modal-overlay">
+        <div class="modal-box" style="max-width: 320px; text-align: center;">
+            <h3 id="alert-title">Informacja</h3>
+            <p class="modal-desc" id="alert-msg">Treść wiadomości</p>
+            <div class="modal-actions">
+                <button class="btn-confirm" onclick="zamknijModale()">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: CONFIRM -->
+    <div id="confirm-modal" class="modal-overlay">
+        <div class="modal-box" style="max-width: 320px; text-align: center;">
+            <h3 id="confirm-title">Potwierdzenie</h3>
+            <p class="modal-desc" id="confirm-msg">Czy na pewno chcesz to zrobić?</p>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="zamknijModale()" id="confirm-btn-no">Nie</button>
+                <button class="btn-confirm" onclick="wykonajAkcjeConfirm()" id="confirm-btn-yes">Tak</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // === KLUCZ API OPENROUTER ===
+        const API_KEY = "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";
+
+        let jezyk = localStorage.getItem("igw_lang") || "pl";
+        document.getElementById("lang-select").value = jezyk;
+
+        let pName = localStorage.getItem("igw_pname") || "Alex";
+        let pGender = localStorage.getItem("igw_pgender") || "Mężczyzna";
+        let pAge = localStorage.getItem("igw_page") || "18";
+        document.getElementById("player-name").value = pName;
+        document.getElementById("player-gender").value = pGender;
+        document.getElementById("player-age").value = pAge;
+
+        function zapiszPostac() {
+            localStorage.setItem("igw_pname", document.getElementById("player-name").value);
+            localStorage.setItem("igw_pgender", document.getElementById("player-gender").value);
+            localStorage.setItem("igw_page", document.getElementById("player-age").value);
+        }
+
+        const uiText = {
+            pl: {
+                mainTitle: "Biblioteka Światów",
+                mainSub: "Skonfiguruj postać, wybierz jeden z 10 światów i rozpocznij przygodę.",
+                exp: "📤 Eksportuj Zapis",
+                imp: "📥 Wgraj Zapis",
+                create: "➕ Stwórz Świat",
+                secChar: "Konfiguracja Twojej Postaci",
+                lblName: "Imię Postaci:",
+                lblGender: "Płeć:",
+                lblAge: "Wiek:",
+                secCustom: "Twoje Własne Opowieści",
+                secOfficial: "Oficjalne Scenariusze (10 Światów)",
+                send: "Wyślij",
+                phInput: "Wpisz swoją akcję (co robisz/mówisz)...",
+                back: "Wróć",
+                reset: "Reset",
+                cTitle: "Kreator Nowego Świata",
+                cL1: "Tytuł Przygody:",
+                cL2: "Tagi i Gatunek:",
+                cL3: "Opis i Streszczenie:",
+                cL4: "Prompt dla Mistrza Gry:",
+                cL5: "Wiadomość Startowa (opcjonalnie):",
+                cCancel: "Anuluj",
+                cSave: "Zapisz i Dodaj",
+                init: "Generowanie świata...",
+                alertTitle: "Informacja",
+                confirmTitle: "Potwierdzenie",
+                btnYes: "Tak",
+                btnNo: "Nie"
+            },
+            en: {
+                mainTitle: "Worlds Library",
+                mainSub: "Configure your character, choose from 10 unique worlds and start your adventure.",
+                exp: "📤 Export Save",
+                imp: "📥 Import Save",
+                create: "➕ Create World",
+                secChar: "Character Configuration",
+                lblName: "Character Name:",
+                lblGender: "Gender:",
+                lblAge: "Age:",
+                secCustom: "Your Custom Stories",
+                secOfficial: "Official Scenarios (10 Worlds)",
+                send: "Send",
+                phInput: "Type your action (what you do/say)...",
+                back: "Back",
+                reset: "Reset",
+                cTitle: "New World Creator",
+                cL1: "Adventure Title:",
+                cL2: "Tags & Genre:",
+                cL3: "Description & Summary:",
+                cL4: "GM Prompt:",
+                cL5: "Starting Message (optional):",
+                cCancel: "Cancel",
+                cSave: "Save and Add",
+                init: "Generating world...",
+                alertTitle: "Information",
+                confirmTitle: "Confirmation",
+                btnYes: "Yes",
+                btnNo: "No"
+            }
+        };
+
+        function zmienJezyk(lang) {
+            jezyk = lang;
+            localStorage.setItem("igw_lang", lang);
+            let t = uiText[lang];
+            document.getElementById("txt-main-title").innerText = t.mainTitle;
+            document.getElementById("txt-main-sub").innerText = t.mainSub;
+            document.getElementById("btn-exp").innerText = t.exp;
+            document.getElementById("btn-imp").innerText = t.imp;
+            document.getElementById("btn-create").innerText = t.create;
+            document.getElementById("sec-char").innerText = t.secChar;
+            document.getElementById("lbl-name").innerText = t.lblName;
+            document.getElementById("lbl-gender").innerText = t.lblGender;
+            document.getElementById("lbl-age").innerText = t.lblAge;
+            document.getElementById("sec-custom").innerText = t.secCustom;
+            document.getElementById("sec-official").innerText = t.secOfficial;
+            document.getElementById("btn-send").innerText = t.send;
+            document.getElementById("userInput").placeholder = t.phInput;
+            document.getElementById("btn-back").innerText = t.back;
+            document.getElementById("btn-reset").innerText = t.reset;
+            
+            document.getElementById("c-mod-title").innerText = t.cTitle;
+            document.getElementById("c-mod-l1").innerText = t.cL1;
+            document.getElementById("c-mod-l2").innerText = t.cL2;
+            document.getElementById("c-mod-l3").innerText = t.cL3;
+            document.getElementById("c-mod-l4").innerText = t.cL4;
+            document.getElementById("c-mod-l5").innerText = t.cL5;
+            document.getElementById("c-mod-cancel").innerText = t.cCancel;
+            document.getElementById("c-mod-save").innerText = t.cSave;
+            
+            document.getElementById("alert-title").innerText = t.alertTitle;
+            document.getElementById("confirm-title").innerText = t.confirmTitle;
+            document.getElementById("confirm-btn-yes").innerText = t.btnYes;
+            document.getElementById("confirm-btn-no").innerText = t.btnNo;
+
+            renderujKategorie();
+        }
+
+        // --- POPRAWIONE FUNKCJE MODALNE ---
+        let akcjaDoWykonania = null;
+        
+        function pokazAlert(wiadomosc) {
+            document.getElementById("alert-msg").innerText = wiadomosc;
+            document.getElementById("alert-modal").style.display = "flex";
+        }
+        
+        function pokazConfirm(wiadomosc, akcja) {
+            document.getElementById("confirm-msg").innerText = wiadomosc;
+            akcjaDoWykonania = akcja; // Zapamiętujemy akcję (np. inicjujNowaSesje)
+            document.getElementById("confirm-modal").style.display = "flex";
+        }
+        
+        function wykonajAkcjeConfirm() {
+            let tempAkcja = akcjaDoWykonania; // Kopiujemy akcję przed zamknięciem okna
+            zamknijModale();                  // Zamykamy okna (co wyzeruje akcjaDoWykonania)
+            if(tempAkcja) { tempAkcja(); }    // Odpalamy skopiowaną akcję
+        }
+
+        function zamknijModale() { 
+            document.querySelectorAll('.modal-overlay').forEach(el => el.style.display = "none"); 
+            akcjaDoWykonania = null; // Czyścimy tylko po zamknięciu (lub anulowaniu)
+        }
+        // ----------------------------------
+
+        // NOWY ZAAWANSOWANY PROMPT: GRACZ VS MISTRZ GRY
+        const GM_RULES = {
+            pl: " Jesteś Mistrzem Gry (GM). Użytkownik jest graczem. Twój cel to reagować na jego akcje, opisywać świat, zachowania NPC i skutki czynów gracza. NIGDY nie decyduj za gracza. NIGDY nie pisz co gracz mówi ani robi. Zawsze czekaj na jego ruch. Na końcu zaproponuj 3 logiczne opcje w formacie: [choice: Opcja 1] [choice: Opcja 2] [choice: Opcja 3] i podaj wytyczne do obrazu [image: opis].",
+            en: " You are the Game Master (GM). The user is the player. React to their actions, describe the world, NPC behaviors, and consequences. NEVER decide for the player. NEVER speak or act on behalf of the player. Always wait for their move. Propose 3 logical choices at the end: [choice: Option 1] [choice: Option 2] [choice: Option 3] and an image prompt [image: description]."
+        };
+
+        const oficjalneSwiaty = [
+            {
+                id: "isekai",
+                tags: "Harem / Fantasy / Isekai",
+                title: { pl: "Isekai Gone Wrong", en: "Isekai Gone Wrong" },
+                desc: { pl: "Zdrada, banicja i spotkanie z intrygującą Królową Demonów.", en: "Betrayal, banishment, and meeting the enigmatic Demon Queen." },
+                prompt: {
+                    pl: "Jesteś GM'em mrocznego anime fantasy (isekai/harem). Postać gracza: {name}, płeć: {gender}, wiek: {age}. Odgrywaj intrygujące, dumne i niebezpieczne postacie (jak Królowa Demonów). Pisz klimatycznie.",
+                    en: "You are the GM of a dark anime fantasy (isekai/harem). Player: {name}, {gender}, {age}. Roleplay intriguing, proud, dangerous characters like the Demon Queen. Write atmospherically."
+                },
+                start: {
+                    pl: "Mgła opada. {name}, lądujesz z hukiem na lodowatej posadzce, a przed Tobą na mrocznym tronie siedzi piękna Królowa Demonów, przyglądając Ci się z chłodną ciekawością. 'Kim jesteś, istoto?' - pyta. Co robisz? [choice: Przedstaw się z honorem] [choice: Sięgnij po broń] [choice: Padnij na kolana] [image: beautiful anime demon queen on a gothic throne looking at a summoned human player, dark fantasy, masterpiece]",
+                    en: "The mist clears. {name}, you land heavily on an icy floor. Before you sits a beautiful Demon Queen on a dark throne, looking at you with cold curiosity. 'Who are you, mortal?' she asks. What do you do? [choice: Introduce yourself] [choice: Reach for weapon] [choice: Fall to knees] [image: beautiful anime demon queen on a gothic throne looking at a summoned human player, dark fantasy, masterpiece]"
+                }
+            },
+            {
+                id: "akademia",
+                tags: "Szkoła / Romans / Magia",
+                title: { pl: "Elitarna Akademia Magii", en: "Elite Magic Academy" },
+                desc: { pl: "Jesteś uczniem w prestiżowej szkole magii zdominowanej przez zuchwałą arystokrację.", en: "You are a student in a prestigious magic school dominated by arrogant nobles." },
+                prompt: {
+                    pl: "Jesteś GM'em szkolnego anime z magią i romansem. Postać gracza: {name}, {gender}, {age}. NPC to dumne arystokratki i rywale. Reaguj na akcje gracza.",
+                    en: "You are the GM of a magic school anime with romance. Player: {name}, {gender}, {age}. NPCs are proud noble girls and rivals. React to player actions."
+                },
+                start: {
+                    pl: "{name}, stoisz na dziedzińcu Akademii Astoria. Bogaci dziedzice patrzą na Ciebie z góry. Nagle, piękna ale dumna arystokratka blokuje Ci drogę. 'Tacy jak ty nie mają tu wstępu' - mówi, naśmiewając się. Co robisz? [choice: Odpowiedz arogancko] [choice: Zignoruj ją i odejdź] [choice: Pokaż swoją magię] [image: anime magic academy courtyard, proud beautiful noble student girl blocking path, fantasy school]",
+                    en: "{name}, you stand in the Astoria Academy courtyard. Rich heirs stare at you. A beautiful, proud noble girl blocks your path. 'Your kind doesn't belong here,' she sneers. What do you do? [choice: Answer arrogantly] [choice: Ignore and walk away] [choice: Show your magic] [image: anime magic academy courtyard, proud beautiful noble student girl blocking path, fantasy school]"
+                }
+            },
+            {
+                id: "cyberpunk",
+                tags: "Sci-Fi / Noir / Akcja",
+                title: { pl: "Neonowy Syndykat", en: "Neon Syndicate" },
+                desc: { pl: "Deszczowe Neo-Tokyo, implanty, cyber-korporacje i walka o przetrwanie w rynsztoku.", en: "Rainy Neo-Tokyo, implants, cyber-corps and fighting for survival." },
+                prompt: {
+                    pl: "Jesteś GM'em brutalnego, mrocznego cyberpunkowego anime. Postać gracza: {name}, {gender}, {age}. Świat jest bezlitosny. Reaguj na akcje gracza.",
+                    en: "You are the GM of a gritty, dark cyberpunk anime. Player: {name}, {gender}, {age}. The world is ruthless. React to player actions."
+                },
+                start: {
+                    pl: "Deszcz bębni w neony nad Twoją głową, {name}. Pijesz syntetyczną whisky w obskurnym barze, gdy nagle drzwi wylatują z zawiasów. Wchodzi odział korporacyjnych oprychów. 'To ten. Brać go żywego'. Co robisz? [choice: Strzelaj pierwszy] [choice: Uciekaj tylnym wyjściem] [choice: Rzuć granat dymny] [image: cyberpunk rainy neon street neo tokyo bar interior anime style, corporate thugs entering]",
+                    en: "Rain beats on neon signs, {name}. You're drinking synth-whiskey in a dirty bar when the doors are kicked open. Corporate thugs step in. 'That's our target. Take them alive.' What do you do? [choice: Shoot first] [choice: Escape out back] [choice: Throw smoke grenade] [image: cyberpunk rainy neon street neo tokyo bar interior anime style, corporate thugs entering]"
+                }
+            },
+            {
+                id: "wampiry",
+                tags: "Gotyk / Romans / Horror",
+                title: { pl: "Karmazynowy Dwór", en: "Crimson Manor" },
+                desc: { pl: "Bal w mrocznej posiadłości, gdzie gośćmi są wygłodniałe wampiry z wyższych sfer.", en: "A ball in a dark manor where guests are hungry, high-society vampires." },
+                prompt: {
+                    pl: "Jesteś GM'em wiktoriańskiego, gotyckiego anime z wampirami. Postać gracza: {name}, {gender}, {age}. NPC są niebezpiecznie uwodzicielscy. Reaguj na akcje gracza.",
+                    en: "You are the GM of a gothic vampire anime. Player: {name}, {gender}, {age}. NPCs are dangerously seductive. React to player actions."
+                },
+                start: {
+                    pl: "Ciężkie, dębowe drzwi Karmazynowego Dworu otwierają się przed Tobą, {name}. Sala pełna jest bladych, pięknych istot wirujących w tańcu. Dochodzi do Ciebie intrygująca wampirzyca z kielichem pełnym krwi. 'Ludzka krew ma taki słodki zapach...' mruczy, podchodząc blisko. Co robisz? [choice: Zaproś ją do tańca] [choice: Odrzuć ją stanowczo] [choice: Spróbuj napić się z kielicha] [image: gothic vampire anime mansion ball, beautiful vampire lady holding a goblet of blood, masterpiece]",
+                    en: "The heavy doors of Crimson Manor open, {name}. The hall is filled with pale, beautiful beings dancing. An intriguing vampiress with a goblet of blood approaches. 'Human blood smells so sweet...' she purrs, leaning in. What do you do? [choice: Ask her to dance] [choice: Push her away] [choice: Try to drink from the goblet] [image: gothic vampire anime mansion ball, beautiful vampire lady holding a goblet of blood, masterpiece]"
+                }
+            },
+            {
+                id: "postapo",
+                tags: "Survival / Post-Apo",
+                title: { pl: "Pustkowia Jutra", en: "Wasteland Tomorrows" },
+                desc: { pl: "Radioaktywne pustkowia, zardzewiałe maszyny i walka o kroplę czystej wody.", en: "Radioactive wastelands, rusted machines, and a fight for a drop of water." },
+                prompt: {
+                    pl: "Jesteś GM'em surowego, post-apokaliptycznego świata w stylu Mad Max/Anime. Postać gracza: {name}, {gender}, {age}. Pisz o przetrwaniu i zasobach.",
+                    en: "You are the GM of a harsh post-apocalyptic anime world. Player: {name}, {gender}, {age}. Focus on survival and resources."
+                },
+                start: {
+                    pl: "{name}, burza piaskowa właśnie minęła. Stoisz przy swoim zepsutym łaziku na środku wydm. W oddali słyszysz ryk silników nadciągającego gangu Łupieżców. Zostało Ci mało amunicji. Co robisz? [choice: Ukryj się w piaskach] [choice: Przygotuj pułapkę z łazika] [choice: Biegnij do ruin] [image: post apocalyptic wasteland ruined city, anime style survivor, mad max style vehicle approaching in dust]",
+                    en: "{name}, the sandstorm just passed. You stand by your broken rover in the dunes. In the distance, you hear the roar of Raider engines. Ammo is low. What do you do? [choice: Hide in the sand] [choice: Rig the rover to explode] [choice: Run to the ruins] [image: post apocalyptic wasteland ruined city, anime style survivor, mad max style vehicle approaching in dust]"
+                }
+            },
+            {
+                id: "kosmos",
+                tags: "Space Opera / Sci-Fi",
+                title: { pl: "Galaktyczna Rubież", en: "Galactic Frontier" },
+                desc: { pl: "Dowodzisz własnym statkiem przemytniczym na krawędzi Imperium Galaktycznego.", en: "Command your own smuggler ship on the edge of the Galactic Empire." },
+                prompt: {
+                    pl: "Jesteś GM'em epickiej Space Opery anime. Postać gracza: {name}, {gender}, {age}. Gracz to kapitan statku. Opisuj technologie i kosmos.",
+                    en: "You are the GM of an epic Space Opera anime. Player: {name}, {gender}, {age}. Player is a ship captain. Describe tech and space."
+                },
+                start: {
+                    pl: "{name}, alarmy na mostku Twojego statku wyją przenikliwie. Bezpośrednio przed Wami z nadprzestrzeni wyszedł potężny Krążownik Imperium i blokuje szlak ucieczki. Komunikator trzeszczy: 'Poddajcie się i wyłączcie tarcze!'. Twoja załoga czeka na rozkazy. Co robisz? [choice: Włącz napęd nadświetlny w ciemno] [choice: Otwórz ogień z dział laserowych] [choice: Spróbuj negocjować] [image: sci-fi spaceship bridge, anime style space opera, red alert lighting, giant cruiser outside window]",
+                    en: "{name}, alarms blare on your bridge. An Imperial Cruiser just dropped out of hyperspace, blocking your path. The comms crackle: 'Surrender and lower your shields!'. Your crew awaits orders. What do you do? [choice: Blind jump to hyperspace] [choice: Open fire with lasers] [choice: Try to negotiate] [image: sci-fi spaceship bridge, anime style space opera, red alert lighting, giant cruiser outside window]"
+                }
+            },
+            {
+                id: "noir",
+                tags: "Detektyw / Kryminał",
+                title: { pl: "Cienie Miasta", en: "City Shadows" },
+                desc: { pl: "Jesteś prywatnym detektywem w zadymionym, zdeprawowanym mieście pełnym mrocznych sekretów.", en: "You are a private eye in a smoky, corrupt city full of dark secrets." },
+                prompt: {
+                    pl: "Jesteś GM'em kryminalnego anime Noir z lat 30-tych. Postać gracza: {name}, {gender}, {age}. Gracz to detektyw. Buduj napięcie i tajemnicę.",
+                    en: "You are the GM of a 1930s noir detective anime. Player: {name}, {gender}, {age}. Player is a detective. Build tension and mystery."
+                },
+                start: {
+                    pl: "W biurze pachnie tanim cygarem i deszczem. Siedzisz przy biurku, {name}, gdy nagle do środka wchodzi wyjątkowo piękna, elegancka kobieta. Kładzie na blacie plik banknotów i zakrwawiony sygnet. 'Zabili go, a policja milczy. Tylko Pan może mi pomóc'. Co robisz? [choice: Przyjmij sprawę i weź pieniądze] [choice: Odrzuć zlecenie - to kłopoty] [choice: Wypytaj o szczegóły i sygnet] [image: 1930s noir detective office anime style, mysterious elegant woman, rainy window, smoking]",
+                    en: "The office smells of cheap cigars and rain. You sit at your desk, {name}, when a beautiful, elegant woman walks in. She drops cash and a bloody signet ring on the desk. 'They killed him, and the cops won't help. Only you can.' What do you do? [choice: Take the case and the cash] [choice: Refuse - it's trouble] [choice: Ask about the ring] [image: 1930s noir detective office anime style, mysterious elegant woman, rainy window, smoking]"
+                }
+            },
+            {
+                id: "wuxia",
+                tags: "Sztuki Walki / Wuxia",
+                title: { pl: "Droga Miecza", en: "Path of the Sword" },
+                desc: { pl: "Starożytne sztuki walki, mityczne energie i krwawa zemsta na wrogiej sekcie.", en: "Ancient martial arts, mystical energies, and bloody revenge on a rival sect." },
+                prompt: {
+                    pl: "Jesteś GM'em anime sztuk walki (Wuxia). Postać gracza: {name}, {gender}, {age}. Opisuj spektakularne walki, techniki oddechu Qi i honor wojowników.",
+                    en: "You are the GM of a Wuxia martial arts anime. Player: {name}, {gender}, {age}. Describe spectacular fights, Qi techniques, and warrior honor."
+                },
+                start: {
+                    pl: "Stoisz, {name}, na szczycie uginającego się pędu bambusa. W dole płonie Twoja rodzinna wioska. Sprawcy - sekta Czerwonego Lotosu - uchodzą ścieżką w dół doliny, śmiejąc się i niosąc zrabowane zwoje Twojego mistrza. Krew pulsuje w Twoich żyłach. Co robisz? [choice: Rzuć się w pościg] [choice: Użyj luku, by zdjąć lidera] [choice: Opanuj gniew i medytuj] [image: wuxia anime style bamboo forest, burning village in the valley, solitary swordsman on bamboo tip]",
+                    en: "You stand on a swaying bamboo tip, {name}. Below, your home village burns. The culprits - the Red Lotus sect - escape down the valley path, laughing with your master's stolen scrolls. Blood boils in your veins. What do you do? [choice: Leap into pursuit] [choice: Use a bow to snipe the leader] [choice: Control your anger and meditate] [image: wuxia anime style bamboo forest, burning village in the valley, solitary swordsman on bamboo tip]"
+                }
+            },
+            {
+                id: "steampunk",
+                tags: "Steampunk / Przygoda",
+                title: { pl: "Mechaniczne Imperium", en: "Clockwork Empire" },
+                desc: { pl: "Sterowce, maszyny parowe, wynalazki i wielki spisek polityczny w mosiężnej stolicy.", en: "Airships, steam engines, inventions, and a grand political conspiracy." },
+                prompt: {
+                    pl: "Jesteś GM'em steampunkowego anime. Postać gracza: {name}, {gender}, {age}. Gracz to bystry wynalazca. Opisuj mosiądz, parę i maszynerię.",
+                    en: "You are the GM of a steampunk anime. Player: {name}, {gender}, {age}. Player is a clever inventor. Describe brass, steam, and machinery."
+                },
+                start: {
+                    pl: "{name}, Twój osobisty sterowiec właśnie dobił do doków w Mieście Zębatek. Zanim zdążyłeś zejść na ląd, na pokład wkroczyli gwardziści w mosiężnych zbrojach z muszkietami parowymi. 'Aresztować tego wynalazcę w imieniu Króla!' krzyczy dowódca. Co robisz? [choice: Wyciągnij pistolet parowy] [choice: Aktywuj mechaniczną pułapkę] [choice: Poddaj się by wejść do cytadeli] [image: steampunk airship docks city anime style, brass gears, guards with steam muskets approaching, Victorian sci-fi]",
+                    en: "{name}, your personal airship just docked in Gear City. Before you could disembark, guards in brass armor with steam muskets boarded. 'Arrest the inventor in the name of the King!' yells the commander. What do you do? [choice: Draw your steam pistol] [choice: Activate a clockwork trap] [choice: Surrender to infiltrate the citadel] [image: steampunk airship docks city anime style, brass gears, guards with steam muskets approaching, Victorian sci-fi]"
+                }
+            },
+            {
+                id: "zombie",
+                tags: "Zombie / Survival",
+                title: { pl: "Kwarantanna", en: "The Quarantine" },
+                desc: { pl: "Apokalipsa w mieście. Hordy nieumarłych za oknem, a kończy się jedzenie. Komu ufasz?", en: "City apocalypse. Undead hordes outside, food is running out. Who do you trust?" },
+                prompt: {
+                    pl: "Jesteś GM'em krwawego anime o przetrwaniu w czasie apokalipsy zombie. Postać gracza: {name}, {gender}, {age}. Buduj napięcie i poczucie zaszczucia.",
+                    en: "You are the GM of a bloody zombie survival anime. Player: {name}, {gender}, {age}. Build tension and a feeling of being trapped."
+                },
+                start: {
+                    pl: "Zabarykadowałeś drzwi supermarketu zniszczonymi regałami, {name}. Na zewnątrz dziesiątki zarażonych tłuką w pękającą witrynę ze szkła. Trzymasz w rękach łom, a towarzysząca Ci ocalała dziewczyna płacze z przerażenia. Szyba właśnie pękła. Co robisz? [choice: Uderz w zombie, które przeszło przez okno] [choice: Chwyć dziewczynę i biegnij na zaplecze] [choice: Rzuć coś głośnego, by odwrócić ich uwagę] [image: zombie apocalypse abandoned supermarket anime style, dark thriller, cracked glass window with undead hordes outside]",
+                    en: "You barricaded the supermarket doors with broken shelves, {name}. Outside, dozens of infected pound on the cracking glass window. You hold a crowbar, and the survivor girl with you is crying in terror. The glass just shattered. What do you do? [choice: Smash the first zombie through the window] [choice: Grab the girl and run to the back room] [choice: Throw something loud as a distraction] [image: zombie apocalypse abandoned supermarket anime style, dark thriller, cracked glass window with undead hordes outside]"
+                }
+            }
+        ];
+
+        let obecnaKategoria = "";
+        let historiaRozmowy = []; 
+        let bazowyPrompt = ""; 
+        let czatElement = document.getElementById("chat");
+
+        window.onload = function() { 
+            zmienJezyk(jezyk);
+            renderujKategorie(); 
+        };
+
+        function renderujKategorie() {
+            let offGrid = document.getElementById("official-categories-grid");
+            offGrid.innerHTML = "";
+            oficjalneSwiaty.forEach(kat => {
+                offGrid.innerHTML += `
+                    <div class="category-card" onclick="uruchomGre('${kat.id}', false)">
+                        <span class="category-badge">${kat.tags}</span>
+                        <h3>${kat.title[jezyk]}</h3>
+                        <p>${kat.desc[jezyk]}</p>
+                    </div>`;
+            });
+
+            let wlasneKategorie = JSON.parse(localStorage.getItem("igw_custom_categories")) || [];
+            let custGrid = document.getElementById("custom-categories-grid");
+            let custContainer = document.getElementById("custom-categories-container");
+            
+            if(wlasneKategorie.length > 0) {
+                custContainer.style.display = "block";
+                custGrid.innerHTML = "";
+                wlasneKategorie.forEach((kat, index) => {
+                    custGrid.innerHTML += `
+                        <div class="category-card" onclick="uruchomGre('${index}', true)">
+                            <span class="category-badge">${kat.tags}</span>
+                            <h3>${kat.title}</h3>
+                            <p>${kat.desc}</p>
+                            <button style="position:absolute; top:10px; right:10px; background:transparent; border:none; color:red; cursor:pointer;" onclick="event.stopPropagation(); usunWlasnaGre(${index})">X</button>
+                        </div>`;
+                });
+            } else { custContainer.style.display = "none"; }
+        }
+
+        function otworzKreator() { document.getElementById("creator-modal").style.display = "flex"; }
+
+        function zapiszWlasnaGre() {
+            let title = document.getElementById("c-title").value;
+            let tags = document.getElementById("c-tags").value;
+            let desc = document.getElementById("c-desc").value;
+            let prompt = document.getElementById("c-prompt").value;
+            let start = document.getElementById("c-start").value;
+            
+            if(!title || !prompt) {
+                pokazAlert(jezyk === 'pl' ? "Wypełnij Tytuł oraz Prompt!" : "Fill Title and Prompt!");
+                return;
+            }
+
+            if(!start) {
+                start = jezyk === 'pl' 
+                    ? `Budzisz się, {name}. Jesteś w świecie: ${tags}. ${desc}. Co robisz? [choice: Rozejrzyj się wokół] [choice: Rusz w nieznane] [choice: Sprawdź swój ekwipunek] [image: fantasy anime landscape atmosphere, masterpiece]`
+                    : `You wake up, {name}. World: ${tags}. ${desc}. What do you do? [choice: Look around] [choice: Venture forth] [choice: Check inventory] [image: fantasy anime landscape atmosphere, masterpiece]`;
+            }
+
+            let nowaKat = { id: "custom_"+Date.now(), title, tags, desc, prompt, start };
+            let wlasne = JSON.parse(localStorage.getItem("igw_custom_categories")) || [];
+            wlasne.push(nowaKat);
+            localStorage.setItem("igw_custom_categories", JSON.stringify(wlasne));
+            
+            document.getElementById("c-title").value = "";
+            document.getElementById("c-tags").value = "";
+            document.getElementById("c-desc").value = "";
+            document.getElementById("c-prompt").value = "";
+            document.getElementById("c-start").value = "";
+            
+            zamknijModale(); 
+            renderujKategorie();
+            pokazAlert(jezyk === 'pl' ? "Twój własny świat został dodany!" : "Your custom world has been added!");
+        }
+
+        function usunWlasnaGre(index) {
+            pokazConfirm(jezyk === 'pl' ? "Czy na pewno usunąć ten świat?" : "Delete this world?", () => {
+                let wlasne = JSON.parse(localStorage.getItem("igw_custom_categories")) || [];
+                let u = wlasne[index];
+                wlasne.splice(index, 1);
+                localStorage.setItem("igw_custom_categories", JSON.stringify(wlasne));
+                localStorage.removeItem("igw_zapis_" + u.id);
+                localStorage.removeItem("igw_czat_" + u.id);
+                renderujKategorie();
+            });
+        }
+
+        function eksportujPlik() {
+            let daneZzapisu = {};
+            for (let i = 0; i < localStorage.length; i++) {
+                let key = localStorage.key(i);
+                if (key && key.startsWith("igw_")) {
+                    daneZzapisu[key] = localStorage.getItem(key);
+                }
+            }
+            let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(daneZzapisu));
+            let downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", "rpg-save-file.json");
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function imortujPlik(event) {
+            let file = event.target.files[0];
+            if (!file) return;
+            let reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    let daneZzapisu = JSON.parse(e.target.result);
+                    for (let klucz in daneZzapisu) {
+                        localStorage.setItem(klucz, daneZzapisu[klucz]);
+                    }
+                    renderujKategorie();
+                    pokazAlert(jezyk === 'pl' ? "Zapis wczytany pomyślnie!" : "Save loaded successfully!");
+                } catch(err) {
+                    pokazAlert(jezyk === 'pl' ? "Błąd: Nieprawidłowy plik zapisu." : "Error: Invalid save file.");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function pokazHub() {
+            document.getElementById("chat-screen").style.display = "none";
+            document.getElementById("hub-screen").style.display = "flex";
+            document.getElementById("btn-back").style.display = "none";
+            document.getElementById("btn-reset").style.display = "none";
+            document.getElementById("app-title").innerText = jezyk === 'pl' ? "Wybierz Świat" : "Choose World";
+            document.getElementById("choices-area").innerHTML = "";
+        }
+
+        function uruchomGre(idLubIndex, czyWlasna) {
+            zapiszPostac();
+            let n = document.getElementById("player-name").value;
+            let g = document.getElementById("player-gender").value;
+            let a = document.getElementById("player-age").value;
+
+            let konfiguracja;
+            if (czyWlasna) {
+                konfiguracja = JSON.parse(localStorage.getItem("igw_custom_categories"))[idLubIndex];
+                obecnaKategoria = konfiguracja.id;
+                document.getElementById("app-title").innerText = konfiguracja.title;
+                bazowyPrompt = konfiguracja.prompt + GM_RULES[jezyk];
+                window.startowaWiadomoscAktualna = konfiguracja.start.replace(/\{name\}/g, n).replace(/\{gender\}/g, g).replace(/\{age\}/g, a);
+            } else {
+                konfiguracja = oficjalneSwiaty.find(k => k.id === idLubIndex);
+                obecnaKategoria = konfiguracja.id;
+                document.getElementById("app-title").innerText = konfiguracja.title[jezyk];
+                let rawPrompt = konfiguracja.prompt[jezyk].replace(/\{name\}/g, n).replace(/\{gender\}/g, g).replace(/\{age\}/g, a);
+                bazowyPrompt = rawPrompt + GM_RULES[jezyk];
+                window.startowaWiadomoscAktualna = konfiguracja.start[jezyk].replace(/\{name\}/g, n).replace(/\{gender\}/g, g).replace(/\{age\}/g, a);
+            }
+
+            document.getElementById("hub-screen").style.display = "none";
+            document.getElementById("chat-screen").style.display = "flex";
+            document.getElementById("btn-back").style.display = "block";
+            document.getElementById("btn-reset").style.display = "block";
+
+            let zapisanyCzat = localStorage.getItem("igw_czat_" + obecnaKategoria);
+            let zapisanaHistoria = localStorage.getItem("igw_zapis_" + obecnaKategoria);
+
+            if (zapisanyCzat && zapisanaHistoria) {
+                historiaRozmowy = JSON.parse(zapisanaHistoria);
+                czatElement.innerHTML = zapisanyCzat;
+                let ostWiadomosc = historiaRozmowy[historiaRozmowy.length - 1];
+                if (ostWiadomosc && ostWiadomosc.role === "assistant") {
+                    wyodrebnijPrzyciskiZTekstu(ostWiadomosc.content);
+                }
+            } else {
+                inicjujNowaSesje();
+            }
+            czatElement.scrollTop = czatElement.scrollHeight;
+        }
+
+        // --- NAPRAWIONA FUNKCJA Pytanie o Reset ---
+        function pytanieOReset() {
+            pokazConfirm(
+                jezyk === 'pl' ? "Zresetować całkowicie postęp w tym świecie i zacząć od nowa?" : "Reset all progress in this world and start over?", 
+                inicjujNowaSesje // Przekazanie funkcji inicjujNowaSesje jako akcji do wykonania
+            );
+        }
+
+        function inicjujNowaSesje() {
+            historiaRozmowy = [];
+            czatElement.innerHTML = "";
+            document.getElementById("choices-area").innerHTML = ""; // Czyści przyciski z poprzedniej gry
+            
+            let idWiadomosci = "ai-" + Date.now();
+            czatElement.innerHTML += `<div class="msg ai" id="${idWiadomosci}">${uiText[jezyk].init}</div>`;
+            przetworzWiadomoscZObrazem(window.startowaWiadomoscAktualna, idWiadomosci);
+            historiaRozmowy.push({ "role": "assistant", "content": window.startowaWiadomoscAktualna });
+            
+            localStorage.setItem("igw_zapis_" + obecnaKategoria, JSON.stringify(historiaRozmowy));
+            localStorage.setItem("igw_czat_" + obecnaKategoria, czatElement.innerHTML);
+        }
+
+        function nasluchajEnter(e) { if (e.key === "Enter") wyslijWiadomosc(); }
+
+        function wyodrebnijPrzyciskiZTekstu(tekstAI) {
+            let area = document.getElementById("choices-area");
+            area.innerHTML = "";
+            let czystyTekst = tekstAI;
+            const regex = /\[choice:(.*?)\]/gi;
+            let match;
+            while ((match = regex.exec(tekstAI)) !== null) {
+                let opcjaText = match[1].trim();
+                czystyTekst = czystyTekst.replace(match[0], "");
+                let btn = document.createElement("button");
+                btn.className = "choice-btn";
+                btn.innerText = opcjaText;
+                btn.onclick = function() {
+                    document.getElementById("userInput").value = opcjaText;
+                    wyslijWiadomosc();
+                };
+                area.appendChild(btn);
+            }
+            return czystyTekst.trim();
+        }
+
+        // --- ZABEZPIECZONY SILNIK GRAFICZNY OPENROUTER API ---
+        async function generujObrazPrzezOpenRouter(opis, containerId) {
+            let pelnyPrompt = opis + ", masterpiece, dark fantasy, best quality, beautiful 2d anime art, highly detailed, cinematic lighting, dramatic shading";
+            
+            try {
+                const odp = await fetch("https://openrouter.ai/api/v1/images/generations", {
+                    method: "POST",
+                    headers: { 
+                        "Authorization": `Bearer ${API_KEY}`, 
+                        "Content-Type": "application/json" 
+                    },
+                    body: JSON.stringify({ 
+                        "model": "bytedance-seed/seedream-5-0-flash", 
+                        "prompt": pelnyPrompt
+                    })
+                });
+
+                if (!odp.ok) {
+                    const fallback = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                        method: "POST",
+                        headers: { "Authorization": `Bearer ${API_KEY}`, "Content-Type": "application/json" },
+                        body: JSON.stringify({ 
+                            "model": "bytedance-seed/seedream-5-0-flash", 
+                            "messages": [{"role": "user", "content": pelnyPrompt}] 
+                        })
+                    });
+                    
+                    if(!fallback.ok) throw new Error("Oba endpointy odrzuciły zapytanie.");
+                    
+                    const fallbackDane = await fallback.json();
+                    let odpowiedzTxt = fallbackDane.choices[0].message.content;
+                    const regexLink = odpowiedzTxt.match(/(https?:\/\/[^\s\)]+)/);
+                    if(regexLink) {
+                        wyswietlObraz(regexLink[1], containerId);
+                    } else {
+                        throw new Error("Brak linku w odpowiedzi fallbacku.");
+                    }
+                    return;
+                }
+
+                const dane = await odp.json();
+                if (dane.data && dane.data[0]) {
+                    if (dane.data[0].url) {
+                        wyswietlObraz(dane.data[0].url, containerId);
+                    } else if (dane.data[0].b64_json) {
+                        let mime = dane.data[0].media_type || "image/png";
+                        wyswietlObraz(`data:${mime};base64,${dane.data[0].b64_json}`, containerId);
+                    }
+                }
+            } catch (err) {
+                console.error("Szczegóły błędu generowania grafiki:", err);
+                let container = document.getElementById(containerId);
+                if (container) {
+                    container.innerHTML = "<span style='font-size:11px; color:#ff3b30; padding:15px; font-weight:bold;'>Błąd Mistrza Gry: MG nie potrafi zilustrować tej sceny w tym momencie. Kontynuuj rozgrywkę.</span>";
+                    container.style.border = "none";
+                    container.style.background = "transparent";
+                }
+            }
+        }
+
+        function wyswietlObraz(url, containerId) {
+            let container = document.getElementById(containerId);
+            if (!container) return;
+            
+            let img = new Image();
+            img.src = url;
+            img.className = "ai-image";
+            img.alt = "Ilustracja sesji";
+            
+            img.onload = function() {
+                container.innerHTML = "";
+                img.style.opacity = "0";
+                container.appendChild(img);
+                
+                setTimeout(() => { 
+                    img.style.transition = "opacity 0.6s ease-in-out"; 
+                    img.style.opacity = "1"; 
+                }, 50);
+                
+                container.style.border = "none";
+                container.style.background = "transparent";
+                container.style.minHeight = "auto";
+            };
+
+            img.onerror = function() {
+                container.innerHTML = "<span style='font-size:11px; color:#ff3b30; padding:15px;'>Błąd wczytywania ilustracji z serwera.</span>";
+            };
+        }
+
+        async function przetworzWiadomoscZObrazem(tekstAI, idWiadomosci) {
+            tekstAI = wyodrebnijPrzyciskiZTekstu(tekstAI);
+            const regexImg = /\[image:(.*?)\]/i;
+            const znalezionoImg = tekstAI.match(regexImg);
+            let opisDoObrazu = "epic anime scene";
+            if (znalezionoImg) {
+                opisDoObrazu = znalezionoImg[1].trim();
+                tekstAI = tekstAI.replace(znalezionoImg[0], "").trim();
+            }
+
+            let unikalnyIdContainer = "container-" + Date.now();
+            
+            document.getElementById(idWiadomosci).innerHTML = `
+                ${tekstAI}
+                <div class="ai-image-container" id="${unikalnyIdContainer}">
+                    <div class="loader-spinner"></div>
+                </div>
+            `;
+            czatElement.scrollTop = czatElement.scrollHeight;
+            
+            await generujObrazPrzezOpenRouter(opisDoObrazu, unikalnyIdContainer);
+        }
+
+        async function wyslijWiadomosc() {
+            let p = document.getElementById("userInput");
+            let tekst = p.value;
+            if (tekst.trim() === "") return;
+
+            document.getElementById("choices-area").innerHTML = "";
+            czatElement.innerHTML += `<div class="msg user">${tekst}</div>`;
+            p.value = ""; czatElement.scrollTop = czatElement.scrollHeight;
+
+            let idWiadomosci = "ai-" + Date.now();
+            czatElement.innerHTML += `<div class="msg ai" id="${idWiadomosci}"><i>MG weryfikuje Twoją akcję...</i></div>`;
+            czatElement.scrollTop = czatElement.scrollHeight;
+
+            historiaRozmowy.push({ "role": "user", "content": tekst });
+            
+            if (historiaRozmowy.length > 12) historiaRozmowy = historiaRozmowy.slice(historiaRozmowy.length - 12);
+
+            try {
+                const odp = await fetch(`https://openrouter.ai/api/v1/chat/completions`, {
+                    method: "POST",
+                    headers: { "Authorization": `Bearer ${API_KEY}`, "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        "model": "google/gemini-2.5-flash",
+                        "messages": [ { "role": "system", "content": bazowyPrompt }, ...historiaRozmowy ]
+                    })
+                });
+                const dane = await odp.json();
+                
+                if (dane.error) {
+                    document.getElementById(idWiadomosci).innerHTML = "<b>Błąd komunikacji z Mistrzem Gry:</b> " + dane.error.message;
+                    return;
+                }
+
+                if (dane.choices && dane.choices[0]) {
+                    let tekstAI = dane.choices[0].message.content;
+                    historiaRozmowy.push({ "role": "assistant", "content": tekstAI });
+                    
+                    await przetworzWiadomoscZObrazem(tekstAI, idWiadomosci);
+
+                    localStorage.setItem("igw_zapis_" + obecnaKategoria, JSON.stringify(historiaRozmowy));
+                    localStorage.setItem("igw_czat_" + obecnaKategoria, czatElement.innerHTML);
+                }
+            } catch (blad) {
+                document.getElementById(idWiadomosci).innerHTML = "<i>Połączenie z serwerem zerwane. Spróbuj powtórzyć akcję.</i>";
+            }
+        }
+
+        let rozpoznawanieMowy = null;
+        let czyNasluchuje = false;
+
+        function nasluchajGlos() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                pokazAlert(uiText[jezyk].speechErr);
+                return;
+            }
+            if (czyNasluchuje) {
+                if (rozpoznawanieMowy) rozpoznawanieMowy.stop();
+                return;
+            }
+            rozpoznawanieMowy = new SpeechRecognition();
+            rozpoznawanieMowy.lang = jezyk === 'pl' ? 'pl-PL' : 'en-US';
+            rozpoznawanieMowy.interimResults = true;
+
+            let micBtn = document.getElementById("mic-btn");
+            let inputField = document.getElementById("userInput");
+
+            rozpoznawanieMowy.onstart = function() {
+                czyNasluchuje = true;
+                micBtn.classList.add("listening");
+                micBtn.innerText = "🛑";
+                inputField.placeholder = uiText[jezyk].speechHint;
+            };
+            rozpoznawanieMowy.onresult = function(event) {
+                let transcript = "";
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    transcript += event.results[i][0].transcript;
+                }
+                inputField.value = transcript;
+            };
+            rozpoznawanieMowy.onerror = function() { zatrzymajNasluchiwanie(); };
+            rozpoznawanieMowy.onend = function() { zatrzymajNasluchiwanie(); };
+            
+            rozpoznawanieMowy.start();
+        }
+
+        function zatrzymajNasluchiwanie() {
+            czyNasluchuje = false;
+            let micBtn = document.getElementById("mic-btn");
+            let inputField = document.getElementById("userInput");
+            micBtn.classList.remove("listening");
+            micBtn.innerText = "🎤";
+            inputField.placeholder = uiText[jezyk].phInput;
+        }
+    </script>
+</body>
+</html>
