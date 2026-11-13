@@ -1,0 +1,17 @@
+=== Sprint 10.11–16.11 ===
+Zobowiązanie z poprzedniego sprintu: Stworzenie szkieletu gry RPG, silnika walki turowej i bazowego kalkulatora szans – zrobione.
+
+Mateusz Kuncewicz
+Zrobiłem/zrobiłam: Zaimplementowałem silnik walki turowej (CombatEngine), 4 klasy postaci, bestiariusz 7 przeciwników, system Tawerny oraz Tablicę Zadań w src/core/.
+W następnym tygodniu zrobię: Dodam tryb szybkiej symulacji walk bez opóźnień (headless) na potrzeby generowania zbioru uczącego dla modelu SI.
+
+Paweł Haśkiewicz
+Zrobiłem/zrobiłam: Przygotowałem bazową heurystykę obliczającą szansę na wygraną (EHP i obrażenia na turę) oraz skonfigurowałem zależności scikit-learn i joblib w requirements.txt.
+W następnym tygodniu zrobię: Napiszę skrypt generujący 20 000 symulowanych pojedynków do pliku CSV i wytrenuję pierwszy model bazowy (regresja logistyczna) wraz z metrykami Brier Score i ROC-AUC.
+
+Franek Gross
+Zrobiłem/zrobiłam: Stworzyłem interfejs graficzny 2D w PyGame (run_gui.py), interfejs terminalowy w Rich (run_cli.py) oraz 11 testów jednostkowych w pytest.
+W następnym tygodniu zrobię: Zaktualizuję ekran podglądu przed walką (PRE_COMBAT), aby wyświetlał predykcję modelu SI obok heurystyki, oraz dopiszę testy dla modułu predykcyjnego.
+
+Blokuje nas: nic
+Zobowiązanie zespołu na następny sprint: Wygenerowanie zbioru 20 000 walk symulacyjnych, wytrenowanie pierwszego modelu klasyfikacyjnego w scikit-learn i porównanie jego wyniku (Brier Score, ROC-AUC) z heurystyką EHP.

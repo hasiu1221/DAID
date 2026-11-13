@@ -1,0 +1,372 @@
+"""
+Enemies and Bestiary system for the Arena.
+Contains balanced opponents ranging from novice dungeon beasts to legendary arena champions and bosses.
+"""
+import copy
+from typing import Dict, List, Optional
+from src.core.character import Character, CharacterClass
+from src.core.skills import Skill, SkillType, SkillTarget, SKILL_REGISTRY
+from src.core.status_effects import StatusEffect, EffectType
+
+
+# Custom skills for specific monsters
+MONSTER_SKILLS: Dict[str, Skill] = {
+    "poison_bite": Skill(
+        id="poison_bite",
+        name="Zatruwające Ukąszenie",
+        skill_type=SkillType.PHYSICAL,
+        target_type=SkillTarget.ENEMY,
+        stamina_cost=15,
+        mana_cost=0,
+        cooldown=2,
+        base_value=16.0,
+        scaling_stat="agility",
+        scaling_factor=1.1,
+        applies_effect=StatusEffect(
+            id="goblin_poison",
+            name="Jad Bestii",
+            effect_type=EffectType.POISON,
+            duration=3,
+            power=9.0,
+            description="Tracisz 9 HP na turę od trucizny.",
+        ),
+        effect_chance=0.8,
+        description="Szybki atak zatruwający ofiarę na 3 tury.",
+    ),
+    "rending_claws": Skill(
+        id="rending_claws",
+        name="Rozpruwające Szpony",
+        skill_type=SkillType.PHYSICAL,
+        target_type=SkillTarget.ENEMY,
+        stamina_cost=20,
+        mana_cost=0,
+        cooldown=2,
+        base_value=24.0,
+        scaling_stat="strength",
+        scaling_factor=1.2,
+        applies_effect=StatusEffect(
+            id="wolf_bleed",
+            name="Głębokie Krwawienie",
+            effect_type=EffectType.BLEED,
+            duration=3,
+            power=14.0,
+            description="Tracisz 14 HP na turę od upływu krwi.",
+        ),
+        effect_chance=0.85,
+        description="Głębokie rozszarpanie wywołujące krwotok.",
+    ),
+    "shadow_curse": Skill(
+        id="shadow_curse",
+        name="Klątwa Cienia",
+        skill_type=SkillType.MAGICAL,
+        target_type=SkillTarget.ENEMY,
+        stamina_cost=0,
+        mana_cost=25,
+        cooldown=2,
+        base_value=28.0,
+        scaling_stat="intelligence",
+        scaling_factor=1.4,
+        applies_effect=StatusEffect(
+            id="cultist_burn",
+            name="Mroczne Płomienie",
+            effect_type=EffectType.BURN,
+            duration=3,
+            power=12.0,
+            description="Obniża obronę i zadaje 12 obrażeń co turę.",
+        ),
+        effect_chance=0.75,
+        description="Poraża wroga czarną magią i podpala jego duszę.",
+    ),
+    "berserk_fury": Skill(
+        id="berserk_fury",
+        name="Szał Berserkera",
+        skill_type=SkillType.PHYSICAL,
+        target_type=SkillTarget.ENEMY,
+        stamina_cost=35,
+        mana_cost=0,
+        cooldown=3,
+        base_value=45.0,
+        scaling_stat="strength",
+        scaling_factor=1.6,
+        crit_bonus=0.20,
+        description="Druzgocący atak o wielkiej sile i podwyższonym krytyku.",
+    ),
+    "life_drain": Skill(
+        id="life_drain",
+        name="Wyssanie Życia",
+        skill_type=SkillType.MAGICAL,
+        target_type=SkillTarget.ENEMY,
+        stamina_cost=10,
+        mana_cost=30,
+        cooldown=3,
+        base_value=32.0,
+        scaling_stat="intelligence",
+        scaling_factor=1.2,
+        applies_effect=StatusEffect(
+            id="death_knight_shield",
+            name="Tarcza Krwi",
+            effect_type=EffectType.SHIELD,
+            duration=2,
+            power=35.0,
+            description="Pochłania 35 pkt obrażeń.",
+        ),
+        effect_chance=1.0,
+        description="Zadaje obrażenia i otacza rycerza barierą krwi.",
+    ),
+    "dragon_breath": Skill(
+        id="dragon_breath",
+        name="Oddech Piekieł",
+        skill_type=SkillType.MAGICAL,
+        target_type=SkillTarget.ENEMY,
+        stamina_cost=20,
+        mana_cost=40,
+        cooldown=3,
+        base_value=65.0,
+        scaling_stat="strength",
+        scaling_factor=1.8,
+        applies_effect=StatusEffect(
+            id="inferno_burn",
+            name="Piekielne Poparzenia",
+            effect_type=EffectType.BURN,
+            duration=4,
+            power=20.0,
+            description="20 obrażeń co turę i stopiony pancerz.",
+        ),
+        effect_chance=0.9,
+        description="Potężny strumień smoczego ognia spalający wszystko.",
+    ),
+}
+
+
+class EnemyTemplate:
+    def __init__(
+        self,
+        template_id: str,
+        name: str,
+        char_class: CharacterClass,
+        difficulty: str,  # "Łatwy", "Średni", "Trudny", "BOSS"
+        reward_gold: int,
+        reward_exp: int,
+        max_hp: float,
+        max_stamina: float,
+        max_mana: float,
+        strength: float,
+        agility: float,
+        intelligence: float,
+        defense: float,
+        dodge_chance: float,
+        crit_chance: float,
+        skills: List[Skill],
+        description: str,
+    ):
+        self.template_id = template_id
+        self.name = name
+        self.char_class = char_class
+        self.difficulty = difficulty
+        self.reward_gold = reward_gold
+        self.reward_exp = reward_exp
+        self.max_hp = max_hp
+        self.max_stamina = max_stamina
+        self.max_mana = max_mana
+        self.strength = strength
+        self.agility = agility
+        self.intelligence = intelligence
+        self.defense = defense
+        self.dodge_chance = dodge_chance
+        self.crit_chance = crit_chance
+        self.skills = skills
+        self.description = description
+
+    def instantiate(self, unique_id: Optional[str] = None) -> Character:
+        c_id = unique_id or f"enemy_{self.template_id}"
+        copied_skills = [copy.deepcopy(s) for s in self.skills]
+        return Character(
+            id=c_id,
+            name=self.name,
+            char_class=self.char_class,
+            max_hp=self.max_hp,
+            current_hp=self.max_hp,
+            max_stamina=self.max_stamina,
+            current_stamina=self.max_stamina,
+            max_mana=self.max_mana,
+            current_mana=self.max_mana,
+            strength=self.strength,
+            agility=self.agility,
+            intelligence=self.intelligence,
+            defense=self.defense,
+            dodge_chance=self.dodge_chance,
+            crit_chance=self.crit_chance,
+            skills=copied_skills,
+        )
+
+
+# Bestiary registry with 7 varied arena opponents
+BESTIARY: Dict[str, EnemyTemplate] = {
+    "goblin": EnemyTemplate(
+        template_id="goblin",
+        name="Goblin Szabrownik",
+        char_class=CharacterClass.ROGUE,
+        difficulty="Łatwy",
+        reward_gold=45,
+        reward_exp=50,
+        max_hp=130.0,
+        max_stamina=90.0,
+        max_mana=30.0,
+        strength=10.0,
+        agility=18.0,
+        intelligence=8.0,
+        defense=8.0,
+        dodge_chance=0.18,
+        crit_chance=0.20,
+        skills=[
+            copy.deepcopy(SKILL_REGISTRY["basic_attack"]),
+            copy.deepcopy(MONSTER_SKILLS["poison_bite"]),
+            copy.deepcopy(SKILL_REGISTRY["guard"]),
+        ],
+        description="Mały, zwinny i podstępny rabuś o zatrutych ostrzach.",
+    ),
+    "dire_wolf": EnemyTemplate(
+        template_id="dire_wolf",
+        name="Wilk Pustkowi",
+        char_class=CharacterClass.WARRIOR,
+        difficulty="Łatwy",
+        reward_gold=60,
+        reward_exp=70,
+        max_hp=160.0,
+        max_stamina=110.0,
+        max_mana=20.0,
+        strength=16.0,
+        agility=16.0,
+        intelligence=5.0,
+        defense=12.0,
+        dodge_chance=0.12,
+        crit_chance=0.15,
+        skills=[
+            copy.deepcopy(SKILL_REGISTRY["basic_attack"]),
+            copy.deepcopy(MONSTER_SKILLS["rending_claws"]),
+            copy.deepcopy(SKILL_REGISTRY["guard"]),
+        ],
+        description="Drapieżna bestia polująca na arenie, rozrywa pancerz i wywołuje krwotok.",
+    ),
+    "bandit_leader": EnemyTemplate(
+        template_id="bandit_leader",
+        name="Kapitan Bandytów",
+        char_class=CharacterClass.WARRIOR,
+        difficulty="Średni",
+        reward_gold=110,
+        reward_exp=120,
+        max_hp=210.0,
+        max_stamina=120.0,
+        max_mana=30.0,
+        strength=22.0,
+        agility=12.0,
+        intelligence=8.0,
+        defense=20.0,
+        dodge_chance=0.08,
+        crit_chance=0.12,
+        skills=[
+            copy.deepcopy(SKILL_REGISTRY["basic_attack"]),
+            copy.deepcopy(SKILL_REGISTRY["heavy_slam"]),
+            copy.deepcopy(SKILL_REGISTRY["iron_skin"]),
+            copy.deepcopy(SKILL_REGISTRY["guard"]),
+        ],
+        description="Doświadczony weteran ulicznych walk. Posiada solidną tarczę i ogłuszający cios.",
+    ),
+    "cultist_sorcerer": EnemyTemplate(
+        template_id="cultist_sorcerer",
+        name="Mroczny Czarnoksiężnik",
+        char_class=CharacterClass.MAGE,
+        difficulty="Średni",
+        reward_gold=140,
+        reward_exp=150,
+        max_hp=175.0,
+        max_stamina=70.0,
+        max_mana=170.0,
+        strength=8.0,
+        agility=14.0,
+        intelligence=26.0,
+        defense=10.0,
+        dodge_chance=0.10,
+        crit_chance=0.18,
+        skills=[
+            copy.deepcopy(SKILL_REGISTRY["fireball"]),
+            copy.deepcopy(MONSTER_SKILLS["shadow_curse"]),
+            copy.deepcopy(SKILL_REGISTRY["arcane_barrier"]),
+            copy.deepcopy(SKILL_REGISTRY["guard"]),
+        ],
+        description="Włada czarną magią, barierami ochronnymi i niszczycielskimi klątwami ognia.",
+    ),
+    "orc_berserker": EnemyTemplate(
+        template_id="orc_berserker",
+        name="Ork Rzeźnik (Berserker)",
+        char_class=CharacterClass.WARRIOR,
+        difficulty="Trudny",
+        reward_gold=220,
+        reward_exp=240,
+        max_hp=290.0,
+        max_stamina=160.0,
+        max_mana=20.0,
+        strength=32.0,
+        agility=12.0,
+        intelligence=6.0,
+        defense=24.0,
+        dodge_chance=0.05,
+        crit_chance=0.22,
+        skills=[
+            copy.deepcopy(MONSTER_SKILLS["berserk_fury"]),
+            copy.deepcopy(SKILL_REGISTRY["heavy_slam"]),
+            copy.deepcopy(SKILL_REGISTRY["rend"]),
+            copy.deepcopy(SKILL_REGISTRY["iron_skin"]),
+        ],
+        description="Góra mięśni o potężnych ciosach toporem. Gdy wpadnie w furię, zadaje potworne obrażenia.",
+    ),
+    "death_knight": EnemyTemplate(
+        template_id="death_knight",
+        name="Nieumarły Rycerz Śmierci",
+        char_class=CharacterClass.PALADIN,
+        difficulty="Trudny",
+        reward_gold=300,
+        reward_exp=320,
+        max_hp=270.0,
+        max_stamina=110.0,
+        max_mana=130.0,
+        strength=24.0,
+        agility=10.0,
+        intelligence=22.0,
+        defense=26.0,
+        dodge_chance=0.06,
+        crit_chance=0.15,
+        skills=[
+            copy.deepcopy(MONSTER_SKILLS["life_drain"]),
+            copy.deepcopy(SKILL_REGISTRY["smite"]),
+            copy.deepcopy(SKILL_REGISTRY["iron_skin"]),
+            copy.deepcopy(SKILL_REGISTRY["guard"]),
+        ],
+        description="Dawny bohater wskrzeszony z grobu. Kradnie punkty życia i posiada niezłomny pancerz.",
+    ),
+    "dragon_champion": EnemyTemplate(
+        template_id="dragon_champion",
+        name="Smoczy Czempion (BOSS)",
+        char_class=CharacterClass.WARRIOR,
+        difficulty="BOSS",
+        reward_gold=600,
+        reward_exp=650,
+        max_hp=420.0,
+        max_stamina=180.0,
+        max_mana=150.0,
+        strength=38.0,
+        agility=16.0,
+        intelligence=25.0,
+        defense=34.0,
+        dodge_chance=0.10,
+        crit_chance=0.25,
+        skills=[
+            copy.deepcopy(MONSTER_SKILLS["dragon_breath"]),
+            copy.deepcopy(MONSTER_SKILLS["berserk_fury"]),
+            copy.deepcopy(SKILL_REGISTRY["heavy_slam"]),
+            copy.deepcopy(SKILL_REGISTRY["iron_skin"]),
+            copy.deepcopy(SKILL_REGISTRY["guard"]),
+        ],
+        description="Legenda areny ziejąca płomieniami. Piekielnie trudny do pokonania, ale oferuje fortunę!",
+    ),
+}
