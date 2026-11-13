@@ -28,7 +28,27 @@ class GameSession:
 
         self.active_enemy_template = self.bestiary[template_id]
         self.preview_enemy_char = self.active_enemy_template.instantiate("enemy_preview")
-        self.preview_analysis = calculate_win_probability(self.player.character, self.preview_enemy_char)
+        analysis = calculate_win_probability(self.player.character, self.preview_enemy_char)
+        analysis["model_used"] = "Kalkulator formułowy"
+        analysis["ai_powered"] = False
+        try:
+            from src.ai.model_predictor import predict_combat_with_ai
+            ai = predict_combat_with_ai(self.player.character, self.preview_enemy_char)
+            if ai.get("ai_powered"):
+                # Sieć neuronowa nadpisuje procent szans i etykietę; zachowujemy obrażenia z kalkulatora
+                analysis.update({
+                    "win_percentage": ai["win_percentage"],
+                    "rating_label": ai["rating_label"],
+                    "color_code": ai["color_code"],
+                    "model_used": ai["model_used"],
+                    "ai_powered": True,
+                })
+                analysis["insights"] = analysis["insights"] + [
+                    f"🧠 Szansę oszacowała Sieć Neuronowa: {ai['model_used']}."
+                ]
+        except Exception:
+            pass  # brak sklearn/modelu -> zostaje kalkulator
+        self.preview_analysis = analysis
         return self.preview_analysis
 
     def decline_battle(self):
